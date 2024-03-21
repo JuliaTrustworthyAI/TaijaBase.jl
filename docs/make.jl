@@ -8,7 +8,7 @@ makedocs(;
     authors="Patrick Altmeyer",
     sitename="TaijaBase.jl",
     format=Documenter.HTML(;
-        canonical="https://pat-alt.github.io/TaijaBase.jl",
+        canonical="https://JuliaTrustworthyAI.github.io/TaijaBase.jl",
         edit_link="main",
         assets=String[],
     ),
@@ -18,6 +18,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/pat-alt/TaijaBase.jl",
+    repo="github.com/JuliaTrustworthyAI/TaijaBase.jl",
     devbranch="main",
 )

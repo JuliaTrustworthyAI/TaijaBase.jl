@@ -1,5 +1,7 @@
 module TaijaBase
 
-# Write your package code here.
+export AbstractParallelizer
+
+include("parallelization/base.jl")
 
 end

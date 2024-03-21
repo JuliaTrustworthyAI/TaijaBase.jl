@@ -4,7 +4,7 @@ CurrentModule = TaijaBase
 
 # TaijaBase
 
-Documentation for [TaijaBase](https://github.com/pat-alt/TaijaBase.jl).
+Documentation for [TaijaBase](https://github.com/JuliaTrustworthyAI/TaijaBase.jl).
 
 ```@index
 ```
