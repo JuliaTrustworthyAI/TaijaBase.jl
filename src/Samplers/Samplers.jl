@@ -5,10 +5,11 @@ using Distributions
 using Flux
 using Flux.Optimise: apply!, Optimiser
 using MLUtils
+using Optimisers
 using Tables
 
 "Base type for sampling rules."
-abstract type AbstractSamplingRule <: Flux.Optimise.AbstractOptimiser end
+abstract type AbstractSamplingRule <: Optimisers.AbstractRule end
 
 "Base type for samplers."
 abstract type AbstractSampler end
@@ -29,11 +30,12 @@ include("optimizers.jl")
 Base method for generating samples for a given models, sampler and sampling rule.
 """
 function (sampler::AbstractSampler)(
-    model, rule::Flux.Optimise.AbstractOptimiser;
-    niter::Int=100,
-    clip_grads::Union{Nothing,AbstractFloat}=1e-2,
-    n_samples::Union{Nothing,Int}=nothing,
-    kwargs...
+    model,
+    rule::Flux.Optimise.AbstractOptimiser;
+    niter::Int = 100,
+    clip_grads::Union{Nothing,AbstractFloat} = 1e-2,
+    n_samples::Union{Nothing,Int} = nothing,
+    kwargs...,
 )
 
     n_samples = isnothing(n_samples) ? sampler.batch_size : n_samples
@@ -42,22 +44,22 @@ function (sampler::AbstractSampler)(
     # # Choose 95% of the batch from the buffer, 5% generate from scratch:
     n_new = rand(Binomial(n_samples, (1.0 - sampler.prob_buffer)))
     rand_imgs = Float32.(rand(sampler.𝒟x, sampler.input_size..., n_new))
-    old_imgs = selectdim(sampler.buffer, ndims(sampler.buffer), rand(1:size(sampler.buffer, ndims(sampler.buffer)), n_samples - n_new))
-    inp_samples = Float32.(cat(rand_imgs, old_imgs, dims=ndims(sampler.buffer)))
+    old_imgs = selectdim(
+        sampler.buffer,
+        ndims(sampler.buffer),
+        rand(1:size(sampler.buffer, ndims(sampler.buffer)), n_samples - n_new),
+    )
+    inp_samples = Float32.(cat(rand_imgs, old_imgs, dims = ndims(sampler.buffer)))
 
     # Perform MCMC sampling:
     rule = isnothing(clip_grads) ? rule : Optimiser(ClipValue(clip_grads), rule)
     Flux.testmode!(model)
-    inp_samples = mcmc_samples(
-        sampler, model, rule, inp_samples;
-        niter=niter,
-        kwargs...
-    )
+    inp_samples = mcmc_samples(sampler, model, rule, inp_samples; niter = niter, kwargs...)
     Flux.trainmode!(model)
     inp_samples = Float32.(clamp.(inp_samples, minimum(sampler.𝒟x), maximum(sampler.𝒟x)))
 
     # Update buffer:
-    sampler.buffer = cat(inp_samples, sampler.buffer, dims=ndims(sampler.buffer))
+    sampler.buffer = cat(inp_samples, sampler.buffer, dims = ndims(sampler.buffer))
     _end = minimum([size(sampler.buffer, ndims(sampler.buffer)), sampler.max_len])
     sampler.buffer = selectdim(sampler.buffer, ndims(sampler.buffer), 1:_end)
 
@@ -90,12 +92,15 @@ end
 Outer constructor for `ConditionalSampler`.
 """
 function ConditionalSampler(
-    𝒟x::Distribution, 𝒟y::Distribution;
-    input_size::Dims, batch_size::Int=1,
-    max_len::Int=10000, prob_buffer::AbstractFloat=0.95
+    𝒟x::Distribution,
+    𝒟y::Distribution;
+    input_size::Dims,
+    batch_size::Int = 1,
+    max_len::Int = 10000,
+    prob_buffer::AbstractFloat = 0.95,
 )
     @assert batch_size <= max_len "batch_size must be <= max_len"
-    buffer = Float32.(rand(𝒟x, input_size..., batch_size))
+    buffer = Float32.(rand(𝒟x, input_size..., maximum([1000, batch_size])))
     return ConditionalSampler(𝒟x, 𝒟y, input_size, batch_size, buffer, max_len, prob_buffer)
 end
 
@@ -109,9 +114,11 @@ end
 Outer constructor for `ConditionalSampler`.
 """
 function ConditionalSampler(
-    X::Union{Tables.MatrixTable,AbstractMatrix}, y::Union{CategoricalArray,AbstractMatrix};
-    batch_size::Int=1,
-    max_len::Int=10000, prob_buffer::AbstractFloat=0.95
+    X::Union{Tables.MatrixTable,AbstractMatrix},
+    y::Union{CategoricalArray,AbstractMatrix};
+    batch_size::Int = 1,
+    max_len::Int = 10000,
+    prob_buffer::AbstractFloat = 0.95,
 )
     @assert batch_size <= max_len "batch_size must be <= max_len"
 
@@ -120,7 +127,7 @@ function ConditionalSampler(
     y = y isa CategoricalArray ? MLJFlux.reformat(y) : y
 
     # Prior distributions:
-    𝒟x = Uniform(extrema(X)...)                             
+    𝒟x = Uniform(extrema(X)...)
     n_classes = size(y, 1)
     𝒟y = Categorical(ones(n_classes) ./ n_classes)          # TODO: make more general
 
@@ -128,7 +135,7 @@ function ConditionalSampler(
     input_size = size(X)[1:end-1]
 
     # Buffer:
-    buffer = Float32.(rand(𝒟x, input_size..., batch_size))
+    buffer = Float32.(rand(𝒟x, input_size..., maximum([1000, batch_size])))
 
     return ConditionalSampler(𝒟x, 𝒟y, input_size, batch_size, buffer, max_len, prob_buffer)
 end
@@ -138,8 +145,8 @@ end
 
 Energy function for `ConditionalSampler`.
 """
-function energy(sampler::ConditionalSampler, model, x, y; agg=mean)
-    return _energy(model, x, y; agg=agg)
+function energy(sampler::ConditionalSampler, model, x, y; agg = mean)
+    return _energy(model, x, y; agg = agg)
 end
 
 """
@@ -158,7 +165,7 @@ function mcmc_samples(
     rule::Flux.Optimise.AbstractOptimiser,
     inp_samples::AbstractArray;
     niter::Int,
-    y::Union{Nothing,Int}=nothing
+    y::Union{Nothing,Int} = nothing,
 )
     # Setup
     if isnothing(y)
@@ -204,11 +211,13 @@ Outer constructor for `UnonditionalSampler`.
 """
 function UnconditionalSampler(
     𝒟x::Distribution;
-    input_size::Dims, batch_size::Int=1,
-    max_len::Int=10000, prob_buffer::AbstractFloat=0.95
+    input_size::Dims,
+    batch_size::Int = 1,
+    max_len::Int = 10000,
+    prob_buffer::AbstractFloat = 0.95,
 )
     @assert batch_size <= max_len "batch_size must be <= max_len"
-    buffer = Float32.(rand(𝒟x, input_size..., batch_size))
+    buffer = Float32.(rand(𝒟x, input_size..., maximum([1000, batch_size])))
     return UnconditionalSampler(𝒟x, input_size, batch_size, buffer, max_len, prob_buffer)
 end
 
@@ -218,7 +227,7 @@ end
 Energy function for `UnconditionalSampler`.
 """
 function energy(sampler::UnconditionalSampler, model, x, y)
-    return _energy(model, x; agg=mean)
+    return _energy(model, x; agg = mean)
 end
 
 """
@@ -237,7 +246,7 @@ function mcmc_samples(
     rule::Flux.Optimise.AbstractOptimiser,
     inp_samples::AbstractArray;
     niter::Int,
-    y::Union{Nothing,Int}=nothing
+    y::Union{Nothing,Int} = nothing,
 )
 
     # Setup:
@@ -280,12 +289,15 @@ end
 Outer constructor for `JointSampler`.
 """
 function JointSampler(
-    𝒟x::Distribution, 𝒟y::Distribution;
-    input_size::Dims, batch_size::Int=1,
-    max_len::Int=10000, prob_buffer::AbstractFloat=0.95
+    𝒟x::Distribution,
+    𝒟y::Distribution;
+    input_size::Dims,
+    batch_size::Int = 1,
+    max_len::Int = 10000,
+    prob_buffer::AbstractFloat = 0.95,
 )
     @assert batch_size <= max_len "batch_size must be <= max_len"
-    buffer = Float32.(rand(𝒟x, input_size..., batch_size))
+    buffer = Float32.(rand(𝒟x, input_size..., maximum([1000, batch_size])))
     return JointSampler(𝒟x, 𝒟y, input_size, batch_size, buffer, max_len, prob_buffer)
 end
 
@@ -314,7 +326,7 @@ function mcmc_samples(
     rule::Flux.Optimise.AbstractOptimiser,
     inp_samples::AbstractArray;
     niter::Int,
-    y::Union{Nothing,Int}=nothing
+    y::Union{Nothing,Int} = nothing,
 )
 
     # Setup:

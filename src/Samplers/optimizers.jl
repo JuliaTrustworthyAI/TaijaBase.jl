@@ -1,3 +1,5 @@
+using Optimisers
+
 @doc raw"""
     SGLD(a::Real=1.0, b::Real=1.0, γ::Real=0.5)
 
@@ -13,26 +15,24 @@ struct SGLD <: AbstractSamplingRule
     a::Float64
     b::Float64
     gamma::Float64
-    state::IdDict{Any,Any}
 end
-SGLD(a::Real=10.0, b::Real=1000.0, γ::Real=0.9) = SGLD(a, b, γ, IdDict())
+SGLD(; a::Real = 10.0, b::Real = 1000.0, γ::Real = 0.9) = SGLD(a, b, γ)
 
-function Flux.Optimise.apply!(o::SGLD, x, Δ)
-    a, b, γ = o.a, o.b, o.gamma
+function Optimisers.apply!(o::SGLD, state, x::AbstractArray{T}, Δ) where {T}
 
-    t = get!(o.state, :t, Ref(1))
-    εt = get!(o.state, t) do
-        (zero(x),)
-    end::Tuple{typeof(x)}
+    a, b, γ = T(o.a), T(o.b), T(o.gamma)
 
-    εt = @.(a * (b + t)^-γ)
-    ηt = εt .* Float32.(randn(size(Δ)))
-    Δ = Float32.(@.(0.5 * εt * Δ + ηt))
+    εt = @.(a * (b + state)^-γ)
+    ηt = εt .* T.(randn(size(Δ)))
 
-    t[] += 1
+    Δ = T.(@.(0.5εt * Δ + ηt))
 
-    return Δ
+    state += 1
+
+    return state, Δ
 end
+
+Optimisers.init(o::SGLD, x::AbstractArray) = 1
 
 @doc raw"""
     ImproperSGLD(α::Real=2.0, σ::Real=0.01)
@@ -48,13 +48,15 @@ struct ImproperSGLD <: AbstractSamplingRule
     alpha::Float64
     sigma::Float64
 end
-ImproperSGLD(α::Real=2.0, σ::Real=0.01) = ImproperSGLD(α, σ)
+ImproperSGLD(; α::Real = 2.0, σ::Real = 0.01) = ImproperSGLD(α, σ)
 
-function Flux.Optimise.apply!(o::ImproperSGLD, x, Δ)
-    α, σ = o.alpha, o.sigma
+function Optimisers.apply!(o::ImproperSGLD, state, x::AbstractArray{T}, Δ) where {T}
+    α, σ = T(o.alpha), T(o.sigma)
 
-    ηt = σ .* Float32.(randn(size(Δ)))
-    Δ = Float32.(@.(0.5 * α * Δ + ηt))
+    ηt = σ .* T.(randn(size(Δ)))
+    Δ = T.(@.(0.5 * α * Δ + ηt))
 
-    return Δ
+    return state, Δ
 end
+
+Optimisers.init(o::ImproperSGLD, x::AbstractArray) = nothing
