@@ -23,15 +23,19 @@ include("optimizers.jl")
 
 """
     (sampler::AbstractSampler)(
-    model, rule::Flux.Optimise.AbstractOptimiser;
-    kwargs...
-)
+        model,
+        rule::AbstractSamplingRule;
+        niter::Int = 100,
+        clip_grads::Union{Nothing,AbstractFloat} = 1e-2,
+        n_samples::Union{Nothing,Int} = nothing,
+        kwargs...,
+    )
 
 Base method for generating samples for a given models, sampler and sampling rule.
 """
 function (sampler::AbstractSampler)(
     model,
-    rule::Flux.Optimise.AbstractOptimiser;
+    rule::AbstractSamplingRule;
     niter::Int = 100,
     clip_grads::Union{Nothing,AbstractFloat} = 1e-2,
     n_samples::Union{Nothing,Int} = nothing,
@@ -52,7 +56,7 @@ function (sampler::AbstractSampler)(
     inp_samples = Float32.(cat(rand_imgs, old_imgs, dims = ndims(sampler.buffer)))
 
     # Perform MCMC sampling:
-    rule = isnothing(clip_grads) ? rule : Optimiser(ClipValue(clip_grads), rule)
+    rule = isnothing(clip_grads) ? rule : Optimisers.OptimiserChain(Optimisers.ClipGrad(clip_grads), rule)
     Flux.testmode!(model)
     inp_samples = mcmc_samples(sampler, model, rule, inp_samples; niter = niter, kwargs...)
     Flux.trainmode!(model)
@@ -152,9 +156,11 @@ end
 """
     mcmc_samples(
         sampler::ConditionalSampler,
-        model, rule::Flux.Optimise.AbstractOptimiser,
+        model,
+        rule::Optimisers.AbstractRule,
         inp_samples::AbstractArray;
-        niter::Int=100, y::Union{Nothing,Int}=nothing
+        niter::Int,
+        y::Union{Nothing,Int} = nothing,
     )
 
 Sampling method for `ConditionalSampler`.
@@ -162,7 +168,7 @@ Sampling method for `ConditionalSampler`.
 function mcmc_samples(
     sampler::ConditionalSampler,
     model,
-    rule::Flux.Optimise.AbstractOptimiser,
+    rule::Optimisers.AbstractRule,
     inp_samples::AbstractArray;
     niter::Int,
     y::Union{Nothing,Int} = nothing,
@@ -172,13 +178,13 @@ function mcmc_samples(
         y = rand(sampler.𝒟y)
     end
     E(x) = energy(sampler, model, x, y)
-    rule = deepcopy(rule)
+    s = Optimisers.setup(rule, E)
 
     # Training:
     i = 1
     while i <= niter
         Δ = gradient(E, inp_samples)[1]
-        Δ = apply!(rule, inp_samples, Δ)
+        Δ = Optimisers.update(s, inp_samples, Δ)[2]
         inp_samples -= Δ
         i += 1
     end
@@ -233,9 +239,11 @@ end
 """
     mcmc_samples(
         sampler::UnconditionalSampler,
-        model, rule::Flux.Optimise.AbstractOptimiser,
+        model,
+        rule::Optimisers.AbstractRule,
         inp_samples::AbstractArray;
-        niter::Int=100
+        niter::Int,
+        y::Union{Nothing,Int} = nothing,
     )
 
 Sampling method for `UnconditionalSampler`.
@@ -243,7 +251,7 @@ Sampling method for `UnconditionalSampler`.
 function mcmc_samples(
     sampler::UnconditionalSampler,
     model,
-    rule::Flux.Optimise.AbstractOptimiser,
+    rule::Optimisers.AbstractRule,
     inp_samples::AbstractArray;
     niter::Int,
     y::Union{Nothing,Int} = nothing,
@@ -251,12 +259,13 @@ function mcmc_samples(
 
     # Setup:
     E(x) = energy(sampler, model, x, nothing)
+    s = Optimisers.setup(rule, E)
 
     # Training:
     i = 1
     while i <= niter
         Δ = gradient(E, inp_samples)[1]
-        Δ = apply!(rule, inp_samples, Δ)
+        Δ = Optimisers.update(s, inp_samples, Δ)[2]
         inp_samples -= Δ
         i += 1
     end
@@ -313,9 +322,11 @@ end
 """
     mcmc_samples(
         sampler::JointSampler,
-        model, rule::Flux.Optimise.AbstractOptimiser,
+        model,
+        rule::Optimisers.AbstractRule,
         inp_samples::AbstractArray;
-        niter::Int=100
+        niter::Int,
+        y::Union{Nothing,Int} = nothing,
     )
 
 Sampling method for `JointSampler`.
@@ -323,7 +334,7 @@ Sampling method for `JointSampler`.
 function mcmc_samples(
     sampler::JointSampler,
     model,
-    rule::Flux.Optimise.AbstractOptimiser,
+    rule::Optimisers.AbstractRule,
     inp_samples::AbstractArray;
     niter::Int,
     y::Union{Nothing,Int} = nothing,
@@ -331,13 +342,14 @@ function mcmc_samples(
 
     # Setup:
     E(x, y) = energy(sampler, model, x, y)
+    s = Optimisers.setup(rule, E)
 
     # Training:
     i = 1
     while i <= niter
         y = rand(sampler.𝒟y)
         Δ = gradient(E, inp_samples, y)[1]
-        Δ = apply!(rule, inp_samples, Δ)
+        Δ = Optimisers.update(s, inp_samples, Δ)[2]
         inp_samples -= Δ
         i += 1
     end
