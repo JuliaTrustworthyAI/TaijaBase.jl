@@ -115,7 +115,7 @@ using TaijaBase.Samplers
         end
 
         results =
-            train_logreg(steps = 1000, opt = TaijaBase.Samplers.SGLD(10.0, 1000.0, 0.9))
+            train_logreg(steps = 10000, opt = TaijaBase.Samplers.SGLD(10.0, 1000.0, 0.9))
         model, weights, trainlosses, testlosses = results
         plot(weights; label = ["Student" "Balance" "Income" "Intercept"])
 

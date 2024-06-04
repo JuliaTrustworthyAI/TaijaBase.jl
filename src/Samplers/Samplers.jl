@@ -178,18 +178,20 @@ function mcmc_samples(
         y = rand(sampler.𝒟y)
     end
     E(x) = energy(sampler, model, x, y)
-    s = Optimisers.setup(rule, E)
+    mod = (inputs = inp_samples, energy = E)
+    s = Optimisers.setup(rule, mod)
 
     # Training:
     i = 1
     while i <= niter
-        Δ = gradient(E, inp_samples)[1]
-        Δ = Optimisers.update(s, inp_samples, Δ)[2]
-        inp_samples -= Δ
+        grad = gradient(mod) do m  # calculate the gradients
+            m.energy(m.inputs)
+        end
+        s, mod = Optimisers.update(s, mod, grad[1])
         i += 1
     end
 
-    return inp_samples
+    return mod.inputs
 end
 
 @doc raw"""
@@ -259,18 +261,20 @@ function mcmc_samples(
 
     # Setup:
     E(x) = energy(sampler, model, x, nothing)
-    s = Optimisers.setup(rule, E)
+    mod = (inputs=inp_samples, energy=E)
+    s = Optimisers.setup(rule, mod)
 
     # Training:
     i = 1
     while i <= niter
-        Δ = gradient(E, inp_samples)[1]
-        Δ = Optimisers.update(s, inp_samples, Δ)[2]
-        inp_samples -= Δ
+        grad = gradient(mod) do m  # calculate the gradients
+            m.energy(m.inputs)
+        end
+        s, mod = Optimisers.update(s, mod, grad[1])
         i += 1
     end
 
-    return inp_samples
+    return mod.inputs
 
 end
 
@@ -342,19 +346,21 @@ function mcmc_samples(
 
     # Setup:
     E(x, y) = energy(sampler, model, x, y)
-    s = Optimisers.setup(rule, E)
+    mod = (inputs=inp_samples, energy=E)
+    s = Optimisers.setup(rule, mod)
 
     # Training:
     i = 1
     while i <= niter
         y = rand(sampler.𝒟y)
-        Δ = gradient(E, inp_samples, y)[1]
-        Δ = Optimisers.update(s, inp_samples, Δ)[2]
-        inp_samples -= Δ
+        grad = gradient(mod) do m  # calculate the gradients
+            m.energy(m.inputs, y)
+        end
+        s, mod = Optimisers.update(s, mod, grad[1])
         i += 1
     end
 
-    return inp_samples
+    return mod.inputs
 
 end
 
