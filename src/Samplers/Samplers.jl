@@ -15,7 +15,7 @@ abstract type AbstractSamplingRule <: Optimisers.AbstractRule end
 abstract type AbstractSampler end
 
 export AbstractSampler, AbstractSamplingRule
-export ConditionalSampler, UnconditionalSampler
+export ConditionalSampler, UnconditionalSampler, JointSampler
 export energy
 
 include("utils.jl")
@@ -201,6 +201,7 @@ Generates unconditional samples: $x \sim p(x).$
 """
 mutable struct UnconditionalSampler <: AbstractSampler
     𝒟x::Distribution
+    𝒟y::Union{Distribution,Nothing}
     input_size::Dims
     batch_size::Int
     buffer::AbstractArray
@@ -210,15 +211,19 @@ end
 
 """
     UnconditionalSampler(
-        𝒟x::Distribution;
-        input_size::Dims, batch_size::Int,
-        max_len::Int=10000, prob_buffer::AbstractFloat=0.95
+        𝒟x::Distribution,
+        𝒟y::Union{Distribution,Nothing};
+        input_size::Dims,
+        batch_size::Int = 1,
+        max_len::Int = 10000,
+        prob_buffer::AbstractFloat = 0.95,
     )
 
 Outer constructor for `UnonditionalSampler`.
 """
 function UnconditionalSampler(
-    𝒟x::Distribution;
+    𝒟x::Distribution,
+    𝒟y::Union{Distribution,Nothing};
     input_size::Dims,
     batch_size::Int = 1,
     max_len::Int = 10000,
@@ -226,7 +231,7 @@ function UnconditionalSampler(
 )
     @assert batch_size <= max_len "batch_size must be <= max_len"
     buffer = Float32.(rand(𝒟x, input_size..., maximum([1000, batch_size])))
-    return UnconditionalSampler(𝒟x, input_size, batch_size, buffer, max_len, prob_buffer)
+    return UnconditionalSampler(𝒟x, 𝒟y, input_size, batch_size, buffer, max_len, prob_buffer)
 end
 
 """

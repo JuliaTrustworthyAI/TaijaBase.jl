@@ -1,32 +1,42 @@
 using Distributions
 using MLJBase
 using Optimisers
-using TaijaBase.Samplers
+using TaijaBase.Samplers: ImproperSGLD, SGLD, JointSampler, ConditionalSampler, UnconditionalSampler, AbstractSampler
 
 @testset "Samplers" begin
-    @testset "ConditionalSampler" begin
-        # Data:
-        nobs = 2000
-        X, y = make_circles(nobs, noise = 0.1, factor = 0.5)
-        Xmat = Float32.(permutedims(matrix(X)))
-        X = table(permutedims(Xmat))
-        batch_size = Int(round(nobs / 10))
 
-        # Distributions:
-        𝒟x = Normal()
-        𝒟y = Categorical(ones(2) ./ 2)
+    f(x) = @.(2x + 1)  # dummy model
+    rule = ImproperSGLD()
 
-        sampler = ConditionalSampler(
-            𝒟x,
-            𝒟y,
-            input_size = size(Xmat)[1:end-1],
-            batch_size = batch_size,
-        )
-        @testset "constructor" begin
-            @testset "default" begin
-                @test sampler isa ConditionalSampler
-                @test sampler isa AbstractSampler
-            end
+    all_samplers = Dict(
+        "Conditional" => ConditionalSampler,
+        "Unconditional" => UnconditionalSampler,
+        "Joint" => JointSampler,
+    )
+
+    for (name, Sampler) in all_samplers
+        @testset "$name" begin
+            # Data:
+            nobs = 2000
+            X, y = make_circles(nobs, noise = 0.1, factor = 0.5)
+            Xmat = Float32.(permutedims(matrix(X)))
+            X = table(permutedims(Xmat))
+            batch_size = Int(round(nobs / 10))
+
+            # Distributions:
+            𝒟x = Normal()
+            𝒟y = Categorical(ones(2) ./ 2)
+
+            sampler = Sampler(
+                𝒟x,
+                𝒟y,
+                input_size = size(Xmat)[1:end-1],
+                batch_size = batch_size,
+            )
+            @test sampler isa AbstractSampler
+
+            X̂ = sampler(f, rule; n_samples=10)
+            @test size(X̂, 2) == 10
         end
     end
 
@@ -115,12 +125,12 @@ using TaijaBase.Samplers
         end
 
         results =
-            train_logreg(steps = 10000, opt = TaijaBase.Samplers.SGLD(10.0, 1000.0, 0.9))
+            train_logreg(steps = 10000, opt = SGLD(10.0, 1000.0, 0.9))
         model, weights, trainlosses, testlosses = results
         plot(weights; label = ["Student" "Balance" "Income" "Intercept"])
 
         results =
-            train_logreg(steps = 1000, opt = TaijaBase.Samplers.ImproperSGLD(2.0, 0.01))
+            train_logreg(steps = 1000, opt = ImproperSGLD(2.0, 0.01))
         model, weights, trainlosses, testlosses = results
         plot(weights; label = ["Student" "Balance" "Income" "Intercept"])
 
