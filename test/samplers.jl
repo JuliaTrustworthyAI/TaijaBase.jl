@@ -54,18 +54,14 @@ using TaijaBase.Samplers:
         # Train a simple neural network on the data (classification)
         Xtrain = MLJBase.matrix(X) |> permutedims
         ytrain = Flux.onehotbatch(y, levels(y))
-        train_set = zip(eachcol(Xtrain), eachcol(ytrain)) 
-        inputdim = size(first(train_set)[1],1)
-        outputdim = size(first(train_set)[2],1)
-        nn = Chain(
-            Dense(inputdim, 32, relu),
-            Dense(32, 32, relu),
-            Dense(32, outputdim),
-        )
+        train_set = zip(eachcol(Xtrain), eachcol(ytrain))
+        inputdim = size(first(train_set)[1], 1)
+        outputdim = size(first(train_set)[2], 1)
+        nn = Chain(Dense(inputdim, 32, relu), Dense(32, 32, relu), Dense(32, outputdim))
         loss(yhat, y) = Flux.logitcrossentropy(yhat, y)
         opt_state = Flux.setup(Flux.Adam(), nn)
         epochs = 5
-        for epoch in 1:epochs
+        for epoch = 1:epochs
             Flux.train!(nn, train_set, opt_state) do m, x, y
                 loss(m(x), y)
             end
@@ -78,11 +74,13 @@ using TaijaBase.Samplers:
         ntrans = 100
         niter = 20
         # Conditionally sample from first class:
-        smpler = ConditionalSampler(𝒟x, 𝒟y, input_size=size(Xmat)[1:end-1], batch_size=bs)
-        x1 = PCD(smpler, nn, ImproperSGLD(); ntransitions=ntrans, niter=niter, y=1)
+        smpler =
+            ConditionalSampler(𝒟x, 𝒟y, input_size = size(Xmat)[1:end-1], batch_size = bs)
+        x1 = PCD(smpler, nn, ImproperSGLD(); ntransitions = ntrans, niter = niter, y = 1)
         # Conditionally sample from second class:
-        smpler = ConditionalSampler(𝒟x, 𝒟y, input_size=size(Xmat)[1:end-1], batch_size=bs)
-        x2 = PCD(smpler, nn, ImproperSGLD(); ntransitions=ntrans, niter=niter, y=2)
+        smpler =
+            ConditionalSampler(𝒟x, 𝒟y, input_size = size(Xmat)[1:end-1], batch_size = bs)
+        x2 = PCD(smpler, nn, ImproperSGLD(); ntransitions = ntrans, niter = niter, y = 2)
 
         # using Plots
         # plt = scatter(Xtrain[1, :], Xtrain[2, :], color=Int.(y.refs), group=Int.(y.refs), label=["X|y=0" "X|y=1"], alpha=0.1)
