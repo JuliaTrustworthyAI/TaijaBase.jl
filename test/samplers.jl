@@ -74,8 +74,21 @@ using TaijaBase.Samplers:
         end
 
         # PCD
-        smpler = ConditionalSampler(𝒟x, 𝒟y, input_size=size(Xmat)[1:end-1], batch_size=batch_size)
-        X̂ = PCD(smpler, nn, ImproperSGLD())
+        bs = 10
+        ntrans = 100
+        niter = 20
+        # Conditionally sample from first class:
+        smpler = ConditionalSampler(𝒟x, 𝒟y, input_size=size(Xmat)[1:end-1], batch_size=bs)
+        x1 = PCD(smpler, nn, ImproperSGLD(); ntransitions=ntrans, niter=niter, y=1)
+        # Conditionally sample from second class:
+        smpler = ConditionalSampler(𝒟x, 𝒟y, input_size=size(Xmat)[1:end-1], batch_size=bs)
+        x2 = PCD(smpler, nn, ImproperSGLD(); ntransitions=ntrans, niter=niter, y=2)
+
+        # using Plots
+        # plt = scatter(Xtrain[1, :], Xtrain[2, :], color=Int.(y.refs), group=Int.(y.refs), label=["X|y=0" "X|y=1"], alpha=0.1)
+        # scatter!(x1[1, :], x1[2, :], color=1, label="X̂|y=0")
+        # scatter!(x2[1, :], x2[2, :], color=2, label="X̂|y=1")
+        # plot(plt, xlims=(-2, 2), ylims=(-2, 2))
 
     end
 
