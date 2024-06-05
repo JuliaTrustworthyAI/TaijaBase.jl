@@ -2,17 +2,24 @@ using Distributions
 using Flux
 using MLJBase
 using Optimisers
-using TaijaBase.Samplers: ImproperSGLD, SGLD, JointSampler, ConditionalSampler, UnconditionalSampler, AbstractSampler
+using TaijaBase.Samplers:
+    ImproperSGLD,
+    SGLD,
+    JointSampler,
+    ConditionalSampler,
+    UnconditionalSampler,
+    AbstractSampler,
+    PCD
 
 @testset "Samplers" begin
 
     f(x) = @.(2x + 1)  # dummy model
-    nn = Chain(Dense(2,1,σ))
+    nn = Chain(Dense(2, 1, σ))
     rule = ImproperSGLD()
 
     # Data:
     nobs = 2000
-    X, y = make_circles(nobs, noise=0.1, factor=0.5)
+    X, y = make_circles(nobs, noise = 0.1, factor = 0.5)
     Xmat = Float32.(permutedims(matrix(X)))
     X = table(permutedims(Xmat))
     batch_size = Int(round(nobs / 10))
@@ -29,21 +36,47 @@ using TaijaBase.Samplers: ImproperSGLD, SGLD, JointSampler, ConditionalSampler, 
 
     for (name, Sampler) in all_samplers
         @testset "$name" begin
-            smpler = Sampler(
-                𝒟x,
-                𝒟y,
-                input_size = size(Xmat)[1:end-1],
-                batch_size = batch_size,
-            )
+            smpler =
+                Sampler(𝒟x, 𝒟y, input_size = size(Xmat)[1:end-1], batch_size = batch_size)
             @test smpler isa AbstractSampler
 
-            X̂ = smpler(f, rule; n_samples=10)
+            X̂ = smpler(f, rule; n_samples = 10)
             @test size(X̂, 2) == 10
 
-            X̂ = smpler(nn, rule; n_samples=10)
+            X̂ = smpler(nn, rule; n_samples = 10)
             @test size(X̂, 2) == 10
 
         end
+    end
+
+    @testset "Persistent Contrastive Divergence (PCD)" begin
+
+        # Train a simple neural network on the data (classification)
+        Xtrain = MLJBase.matrix(X) |> permutedims
+        ytrain = Flux.onehotbatch(y, levels(y))
+        train_set = zip(eachcol(Xtrain), eachcol(ytrain)) 
+        inputdim = size(first(train_set)[1],1)
+        outputdim = size(first(train_set)[2],1)
+        nn = Chain(
+            Dense(inputdim, 32, relu),
+            Dense(32, 32, relu),
+            Dense(32, outputdim),
+        )
+        loss(yhat, y) = Flux.logitcrossentropy(yhat, y)
+        opt_state = Flux.setup(Flux.Adam(), nn)
+        epochs = 5
+        for epoch in 1:epochs
+            Flux.train!(nn, train_set, opt_state) do m, x, y
+                loss(m(x), y)
+            end
+            @info "Epoch $epoch"
+            println("Accuracy: ", mean(Flux.onecold(nn(Xtrain)) .== Flux.onecold(ytrain)))
+        end
+
+        # PCD
+        smpler = ConditionalSampler(𝒟x, 𝒟y, input_size=size(Xmat)[1:end-1], batch_size=batch_size)
+        X̂ = PCD(smpler, nn, ImproperSGLD())
+
     end
 
     @testset "Optimizers (Bayesian Inference Example)" begin
@@ -130,13 +163,11 @@ using TaijaBase.Samplers: ImproperSGLD, SGLD, JointSampler, ConditionalSampler, 
             model, weights, trainlosses, testlosses
         end
 
-        results =
-            train_logreg(steps = 10000, opt = SGLD(10.0, 1000.0, 0.9))
+        results = train_logreg(steps = 10000, opt = SGLD(10.0, 1000.0, 0.9))
         model, weights, trainlosses, testlosses = results
         plot(weights; label = ["Student" "Balance" "Income" "Intercept"])
 
-        results =
-            train_logreg(steps = 1000, opt = ImproperSGLD(2.0, 0.01))
+        results = train_logreg(steps = 1000, opt = ImproperSGLD(2.0, 0.01))
         model, weights, trainlosses, testlosses = results
         plot(weights; label = ["Student" "Balance" "Income" "Intercept"])
 
