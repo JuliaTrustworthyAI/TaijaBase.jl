@@ -119,7 +119,7 @@ function PCD(
     kwargs...,
 )
     i = 1
-    while i <= ntransitions
+    while i < ntransitions
         sampler(model, rule; niter = niter, kwargs...)
         i += 1
     end
