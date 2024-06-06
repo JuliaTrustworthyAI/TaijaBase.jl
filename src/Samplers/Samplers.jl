@@ -67,8 +67,6 @@ function (sampler::AbstractSampler)(
     input_samples =
         mcmc_samples(sampler, model, rule, input_samples; niter = niter, kwargs...)
     Flux.trainmode!(model)
-    input_samples =
-        Float32.(clamp.(input_samples, minimum(sampler.𝒟x), maximum(sampler.𝒟x)))
 
     # Update buffer:
     sampler.buffer = cat(input_samples, sampler.buffer, dims = ndims(sampler.buffer))

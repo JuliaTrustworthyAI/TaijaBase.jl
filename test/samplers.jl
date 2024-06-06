@@ -120,7 +120,7 @@ using TaijaBase.Samplers:
         train_y, test_y = prep_y.((train[:, target], test[:, target]))
         train_set = Flux.DataLoader(
             (train_X, train_y),
-            batchsize = size(train_X, 2),
+            batchsize = 100,
             shuffle = false,
         )
 
@@ -174,11 +174,11 @@ using TaijaBase.Samplers:
             model, weights, trainlosses, testlosses
         end
 
-        results = train_logreg(steps = 10000, opt = SGLD(10.0, 1000.0, 0.9))
+        results = train_logreg(steps = 1000, opt = SGLD(10.0, 1000.0, 0.9))
         model, weights, trainlosses, testlosses = results
         plot(weights; label = ["Student" "Balance" "Income" "Intercept"])
 
-        results = train_logreg(steps = 1000, opt = ImproperSGLD(2.0, 0.01))
+        results = train_logreg(steps = 100, opt = ImproperSGLD(2.0, 0.01))
         model, weights, trainlosses, testlosses = results
         plot(weights; label = ["Student" "Balance" "Income" "Intercept"])
 

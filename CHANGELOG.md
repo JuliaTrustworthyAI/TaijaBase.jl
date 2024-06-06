@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 *Note*: We try to adhere to these practices as of version [v1.1.0].
 
+## Version [1.2.1] - 2024-06-06
+
+### Removed
+
+- No longer clipping generated samples at extrema of prior. [#13]
+
 ## Version [1.2.0] - 2024-06-05
 
 ### Added
