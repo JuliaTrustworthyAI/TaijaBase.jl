@@ -38,7 +38,7 @@ function (sampler::AbstractSampler)(
     model,
     rule::AbstractSamplingRule;
     niter::Int = 100,
-    clip_grads::Union{Nothing,AbstractFloat} = nothing,
+    clip_grads::Union{Nothing,AbstractFloat}=1e-2,
     n_samples::Union{Nothing,Int} = nothing,
     kwargs...,
 )
@@ -196,14 +196,18 @@ function mcmc_samples(
     end
     mod = (inputs = input_samples, energy = energy)
     s = Optimisers.setup(rule, mod)
+    ntotal = size(input_samples, ndims(input_samples))
+    dl = DataLoader((1:ntotal,), batchsize=sampler.batch_size)
 
     # Training:
     i = 1
     while i <= niter
-        grad = gradient(mod) do m  # calculate the gradients
-            m.energy(sampler, model, m.inputs, y)
+        for (i,) in dl
+            grad = gradient(mod) do m  # calculate the gradients
+                m.energy(sampler, model, m.inputs[:,i], y)
+            end
+            s, mod = Optimisers.update(s, mod, grad[1])
         end
-        s, mod = Optimisers.update(s, mod, grad[1])
         i += 1
     end
 
