@@ -27,7 +27,7 @@ include("optimizers.jl")
         model,
         rule::AbstractSamplingRule;
         niter::Int = 100,
-        clip_grads::Union{Nothing,AbstractFloat} = nothing,
+        clip_grads::Union{Nothing,AbstractFloat} = 1e-2,
         n_samples::Union{Nothing,Int} = nothing,
         kwargs...,
     )
