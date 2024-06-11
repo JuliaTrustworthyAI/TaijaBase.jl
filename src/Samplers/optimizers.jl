@@ -23,7 +23,7 @@ function Optimisers.apply!(o::SGLD, state, x::AbstractArray{T}, Δ) where {T}
     a, b, γ = T(o.a), T(o.b), T(o.gamma)
 
     εt = @.(a * (b + state)^-γ)
-    ηt = εt .* T.(randn(size(Δ))) 
+    ηt = εt .* T.(randn(size(Δ)))
 
     Δ = T.(@.(0.5εt * Δ + ηt))
 

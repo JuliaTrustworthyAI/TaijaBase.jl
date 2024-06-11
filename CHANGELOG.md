@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 *Note*: We try to adhere to these practices as of version [v1.1.0].
 
+## Version [1.2.2] - 2024-06-11
+
+### Changed
+
+- Renamed `PCD` to `PCM` to make it clearer that this simply runs persistent Markov chains, not contrastive divergence. [#14]
+- Improved `mcmc_samples` to now allow mini-batch training. [#14]
+
 ## Version [1.2.1] - 2024-06-06
 
 ### Removed

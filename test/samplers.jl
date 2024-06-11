@@ -118,11 +118,7 @@ using TaijaBase.Samplers:
         prep_y(y) = reshape(y, 1, :) |> gpu
         train_X, test_X = prep_X.((train[:, features], test[:, features]))
         train_y, test_y = prep_y.((train[:, target], test[:, target]))
-        train_set = Flux.DataLoader(
-            (train_X, train_y),
-            batchsize = 100,
-            shuffle = false,
-        )
+        train_set = Flux.DataLoader((train_X, train_y), batchsize = 100, shuffle = false)
 
         function train_logreg(; steps::Int = 1000, opt = Flux.Descent(2))
             Random.seed!(1)
