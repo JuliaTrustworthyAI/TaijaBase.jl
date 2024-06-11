@@ -16,7 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- Added support for running persistent contrastive divergence (PCD) on models. [#10]
+- Added support for running Persistent Markov Chains (PMC) on models. [#10]
 
 ## Version [1.1.1] - 2024-06-04
 
