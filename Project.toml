@@ -1,7 +1,7 @@
 name = "TaijaBase"
 uuid = "10284c91-9f28-4c9a-abbf-ee43576dfff6"
 authors = ["Patrick Altmeyer"]
-version = "1.2.1"
+version = "1.2.2"
 
 [deps]
 CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
