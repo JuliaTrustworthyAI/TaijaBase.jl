@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- Adds support for `pkg_template` function that can be used to generate a `PkgTemplates.Template` for a Taija package.
+- Adds support for `pkg_template` function that can be used to generate a `PkgTemplates.Template` for a Taija package. [#15]
 
 ## Version [1.2.2] - 2024-06-11
 
