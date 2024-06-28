@@ -13,4 +13,11 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 Aqua = "0.8"
+Distributions = "0.25"
+Flux = "0.14"
+MLDataUtils = "0.5"
+MLJBase = "1.5"
+Optimisers = "0.3"
+Plots = "1.40"
+RDatasets = "0.7"
 julia = "1.6, 1.10"
