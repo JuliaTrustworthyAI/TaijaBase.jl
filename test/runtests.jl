@@ -9,4 +9,6 @@ using Test
 
     include("samplers.jl")
 
+    include("template.jl")
+
 end
