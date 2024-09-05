@@ -45,6 +45,7 @@ function pkg_template(; authors::String, dir::String="~")
                 License(),
                 Quarto(),
                 RegisterAction(),
+                Tests(aqua=true)
             ]
         )
     end
