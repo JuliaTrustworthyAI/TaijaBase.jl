@@ -12,6 +12,5 @@ Documentation for [TaijaBase](https://github.com/JuliaTrustworthyAI/TaijaBase.jl
 ```@autodocs
 Modules = [
     TaijaBase,
-    TaijaBase.Samplers,
 ]
 ```
