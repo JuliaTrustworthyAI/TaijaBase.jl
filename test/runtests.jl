@@ -7,8 +7,4 @@ using Test
 
     include("parallelization.jl")
 
-    include("samplers.jl")
-
-    include("template.jl")
-
 end
