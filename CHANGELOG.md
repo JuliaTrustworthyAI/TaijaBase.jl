@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 *Note*: We try to adhere to these practices as of version [v1.1.0].
 
+## Version [1.3.0] - 2024-06-27
+
+### Added
+
+- Adds support for `pkg_template` function that can be used to generate a `PkgTemplates.Template` for a Taija package. [#15]
 ## Version [1.2.3] - 2024-09-09
 
 ### Removed
